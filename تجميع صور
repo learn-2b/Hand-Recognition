@@ -1,0 +1,76 @@
+import cv2
+import mediapipe as mp
+import os
+
+# إعداد Mediapipe
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands()
+mp_drawing = mp.solutions.drawing_utils
+
+# إعدادات الإشارة وعدد الصور
+gesture_name = "hello"  # اسم الإشارة
+num_images = 100  # عدد الصور المطلوب جمعها
+output_dir = f"dataset/{gesture_name}"  # مجلد حفظ الصور
+counter = 0  # عداد الصور
+is_capturing = False  # حالة التقاط الصور
+
+# إنشاء المجلد إذا لم يكن موجودًا
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+    print(f"Created folder: {output_dir}")
+
+# فتح الكاميرا
+cap = cv2.VideoCapture(0)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # قلب الصورة لجعلها كمرآة
+    frame = cv2.flip(frame, 1)
+
+    # تحويل الصورة إلى RGB لأن Mediapipe يعمل مع صيغة RGB
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    result = hands.process(rgb_frame)
+
+    # إذا تم اكتشاف اليد
+    if result.multi_hand_landmarks:
+        for hand_landmarks in result.multi_hand_landmarks:
+            # رسم النقاط والاتصالات بين الأصابع
+            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+    # عرض التعليمات فقط إذا لم يبدأ التقاط الصور
+    if not is_capturing:
+        cv2.putText(frame, "Press 'S' to Start Capturing | Press 'ESC' to Exit", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+    # عرض الفيديو
+    cv2.imshow('Hand Tracking', frame)
+
+    # بدء الالتقاط عند الضغط على S
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('s'):  # عند الضغط على S
+        is_capturing = True  # تشغيل الالتقاط
+        print("Capturing started!")
+
+    # التقاط الصور تلقائيًا إذا كان الالتقاط نشطًا
+    if is_capturing and counter < num_images:
+        file_name = f"{output_dir}/{gesture_name}_{counter}.jpg"
+        cv2.imwrite(file_name, frame)
+        print(f"Saved: {file_name}")
+        counter += 1
+
+    # التوقف عند الوصول إلى العدد المطلوب
+    if counter >= num_images:
+        print("Captured 100 images successfully!")
+        is_capturing = False  # إيقاف الالتقاط
+
+    # الخروج عند الضغط على ESC
+    if key == 27:  # عند الضغط على ESC
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+print(f"Collected {counter} images for gesture '{gesture_name}'.")
