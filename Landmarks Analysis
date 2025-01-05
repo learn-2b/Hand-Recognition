@@ -1,0 +1,36 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# تحميل المعالم المحفوظة
+landmarks = np.load("hello_landmarks.npy")
+
+# عرض الأبعاد الكلية للبيانات
+print(f"أبعاد البيانات: {landmarks.shape}")
+print(f"عدد الصور التي تم استخراج معالم اليد منها: {landmarks.shape[0]}")
+
+# التحقق من عدد النقاط المرجعية (يجب أن تكون 21 نقطة لكل صورة)
+num_points = landmarks.shape[1]
+if num_points == 21:
+    print("عدد النقاط المرجعية لكل صورة صحيح: 21 نقطة")
+else:
+    print(f"تحذير: عدد النقاط المرجعية لكل صورة غير صحيح ({num_points} نقطة)")
+
+# حساب المتوسط والانحراف المعياري لكل إحداثي (x, y, z)
+mean_values = np.mean(landmarks, axis=0)
+std_values = np.std(landmarks, axis=0)
+print("\nإحصائيات المعالم:")
+print(f"المتوسط لكل إحداثي (x, y, z):\n{mean_values}")
+print(f"الانحراف المعياري لكل إحداثي (x, y, z):\n{std_values}")
+
+# رسم المعالم لأول صورة
+first_image_landmarks = landmarks[0]  # أخذ المعالم الخاصة بأول صورة
+x_coords = first_image_landmarks[:, 0]
+y_coords = first_image_landmarks[:, 1]
+
+plt.scatter(x_coords, y_coords)
+plt.title("Landmarks for the first image")
+plt.xlabel("X")
+plt.ylabel("Y")
+plt.gca().invert_yaxis()  # عكس المحور Y لجعل الرسم متوافقًا مع الإحداثيات
+plt.grid(True)
+plt.show()
