@@ -1,0 +1,32 @@
+import numpy as np
+import os
+
+# قائمة بالإشارات التي تريد دمج بياناتها
+gestures = ["hello", "good", "bad"]  # ضع هنا أسماء الإشارات التي جمعت بياناتها
+all_landmarks = []  # لتخزين جميع المعالم
+all_labels = []     # لتخزين التصنيفات الخاصة بكل معلم
+
+# قراءة المعالم من ملفات npy لكل إشارة وإضافة التصنيفات
+for label, gesture in enumerate(gestures):
+    file_path = f"{gesture}_landmarks.npy"  # مسار ملف المعالم لكل إشارة
+    
+    # تحميل المعالم من الملف
+    landmarks = np.load(file_path)
+    
+    # إضافة المعالم إلى القائمة
+    all_landmarks.append(landmarks)
+    
+    # إنشاء تصنيفات بنفس طول عدد العينات (الصور) لكل إشارة
+    labels = np.full((landmarks.shape[0],), label)
+    all_labels.append(labels)
+
+# دمج جميع المعالم والتصنيفات في مصفوفة واحدة
+all_landmarks = np.concatenate(all_landmarks, axis=0)  # دمج المعالم
+all_labels = np.concatenate(all_labels, axis=0)        # دمج التصنيفات
+
+# حفظ البيانات المدمجة لاستخدامها في التدريب لاحقًا
+np.save("all_landmarks.npy", all_landmarks)
+np.save("all_labels.npy", all_labels)
+
+print("تم دمج البيانات وحفظها في الملفات 'all_landmarks.npy' و 'all_labels.npy'")
+print(f"عدد العينات الإجمالي: {all_landmarks.shape[0]}")
