@@ -10,17 +10,20 @@ hands = mp_hands.Hands(static_image_mode=False,
                        min_tracking_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
 
-# إعدادات الإشارة و عدد الصور
+# إعدادات الإشارة وعدد الصور
 gesture_name = "hello"  # اسم الإشارة
-num_images = 100  # عدد الصور المطلوب جمعها
+total_images = 100  # العدد الإجمالي للصور المطلوب جمعها
+batch_size = 10  # عدد الصور في كل دفعة
 output_dir = f"dataset/{gesture_name}"  # مجلد حفظ الصور
-counter = 0  # عداد الصور
+counter = 0  # عداد الصور الكلي
+batch_counter = 0  # عداد الصور في كل دفعة
 is_capturing = False  # حالة التقاط الصور
 
 # إنشاء المجلد إذا لم يكن موجودًا
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
     print(f"Created folder: {output_dir}")
+
 # فتح الكاميرا
 cap = cv2.VideoCapture(0)
 
@@ -36,31 +39,47 @@ while cap.isOpened():
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     result = hands.process(rgb_frame)
 
-    # إذا كانت عملية الالتقاط نشطة، احفظ الإطار كما هو
-    if is_capturing and counter < num_images:
+    # إذا كانت عملية الالتقاط نشطة، احفظ الإطار
+    if is_capturing and batch_counter < batch_size and counter < total_images:
         file_name = f"{output_dir}/{gesture_name}_{counter}.jpg"
         cv2.imwrite(file_name, frame)
         print(f"Saved: {file_name}")
         counter += 1
-# إذا لم تكن عملية الالتقاط نشطة، اعرض النص والإطار فقط
+        batch_counter += 1
+
+    # عرض النص إذا لم تكن عملية الالتقاط نشطة
     if not is_capturing:
         cv2.putText(frame, "Press 'S' to Start Capturing | Press 'ESC' to Exit", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    else:
+        if batch_counter >= batch_size:
+            cv2.putText(frame, f"Batch done! Press 'N' to capture next batch", (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        else:
+            cv2.putText(frame, f"Capturing... {batch_counter}/{batch_size}", (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-    # عرض الفيديو بدون النقاط أثناء الالتقاط
+    # عرض الفيديو
     cv2.imshow('Hand Tracking', frame)
 
     # بدء الالتقاط عند الضغط على S
     key = cv2.waitKey(1) & 0xFF
-    if key == ord('s'):  # عند الضغط على S
-        is_capturing = True  # تشغيل الالتقاط
+    if key == ord('s') and not is_capturing:  # عند الضغط على S لبدء الالتقاط
+        is_capturing = True
+        batch_counter = 0  # إعادة عداد الدفعة إلى الصفر
         print("Capturing started!")
 
+    # الانتقال إلى الدفعة التالية عند الضغط على N
+    if key == ord('n') and batch_counter >= batch_size and counter < total_images:
+        batch_counter = 0  # إعادة عداد الدفعة
+        print("Next batch capturing started!")
+
     # التوقف عند الوصول إلى العدد المطلوب
-    if counter >= num_images:
-        print(f"Captured {num_images} images successfully!")
+    if counter >= total_images:
+        print(f"Captured {total_images} images successfully!")
         is_capturing = False  # إيقاف الالتقاط
-# الخروج عند الضغط على ESC
+
+    # الخروج عند الضغط على ESC
     if key == 27:  # عند الضغط على ESC
         break
 
@@ -68,9 +87,3 @@ cap.release()
 cv2.destroyAllWindows()
 
 print(f"Collected {counter} images for gesture '{gesture_name}'.")
-# إعدادات الإشارة وعدد الصور
-gesture_name = "hello"  # اسم الإشارة
-num_images = 100  # عدد الصور المطلوب جمعها
-output_dir = f"dataset/{gesture_name}"  # مجلد حفظ الصور
-counter = 0  # عداد الصور
-is_capturing = False  # حالة التقاط الصور
