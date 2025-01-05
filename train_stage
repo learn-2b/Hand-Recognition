@@ -1,0 +1,40 @@
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Dropout
+from tensorflow.keras.utils import to_categorical
+
+# تحميل البيانات
+landmarks = np.load("all_landmarks.npy")  # مصفوفة المعالم (عدد العينات، 21 نقطة، 3 إحداثيات)
+labels = np.load("all_labels.npy")        # مصفوفة التصنيفات (عدد العينات)
+
+# تقسيم البيانات إلى بيانات تدريب واختبار
+X_train, X_test, y_train, y_test = train_test_split(landmarks, labels, test_size=0.2, random_state=42)
+
+# تحويل التصنيفات إلى صيغة One-Hot Encoding
+num_classes = len(np.unique(labels))  # عدد التصنيفات المختلفة
+y_train = to_categorical(y_train, num_classes)
+y_test = to_categorical(y_test, num_classes)
+
+# بناء النموذج
+model = Sequential([
+    Flatten(input_shape=(21, 3)),        # تحويل المعالم إلى شكل مسطح
+    Dense(128, activation='relu'),       # طبقة Dense مع 128 وحدة
+    Dropout(0.3),                        # طبقة Dropout لتقليل الإفراط في التعلم
+    Dense(64, activation='relu'),        # طبقة Dense مع 64 وحدة
+    Dense(num_classes, activation='softmax')  # الطبقة النهائية للإخراج مع عدد الوحدات = عدد التصنيفات
+])
+
+# تجميع النموذج
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# تدريب النموذج
+history = model.fit(X_train, y_train, epochs=20, batch_size=32, validation_data=(X_test, y_test))
+
+# تقييم النموذج
+test_loss, test_accuracy = model.evaluate(X_test, y_test)
+print(f"دقة النموذج على بيانات الاختبار: {test_accuracy * 100:.2f}%")
+
+# حفظ النموذج
+model.save("hand_gesture_model.h5")
+print("تم حفظ النموذج في الملف 'hand_gesture_model.h5'")
