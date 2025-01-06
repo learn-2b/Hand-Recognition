@@ -36,5 +36,5 @@ test_loss, test_accuracy = model.evaluate(X_test, y_test)
 print(f"دقة النموذج على بيانات الاختبار: {test_accuracy * 100:.2f}%")
 
 # حفظ النموذج
-model.save("hand_gesture_model.keras")
-print("تم حفظ النموذج في الملف 'hand_gesture_model.keras'")
+model.save("hand_gesture_model.h5")
+print("تم حفظ النموذج في الملف 'hand_gesture_model.h5'")
