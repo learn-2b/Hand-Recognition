@@ -1,0 +1,102 @@
+import tkinter as tk
+from tkinter import filedialog
+import cv2
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+import mediapipe as mp
+import os
+
+# تعطيل رسائل TensorFlow التحذيرية
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+# **حدد مسار النموذج هنا**
+MODEL_PATH = r'C:\Users\DELL\Desktop\project8-hand-recognetion\hand_gesture_model.h5'  # استخدم الاسم الصحيح
+
+# التحقق من وجود النموذج
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"لم يتم العثور على ملف النموذج في المسار المحدد: {MODEL_PATH}")
+
+# تحميل النموذج المدرب
+model = load_model(MODEL_PATH)
+
+# الإيماءات المتوقعة
+gestures = ["Hello", "Good", "Bad"]
+
+# Mediapipe لإدارة اكتشاف اليد
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.5)
+
+def extract_hand_landmarks(image_path):
+    """استخراج معالم اليد من الصورة"""
+    image = cv2.imread(image_path)
+    if image is None:
+        return None, "تعذر تحميل الصورة. تأكد من المسار."
+
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    results = hands.process(image_rgb)
+
+    if not results.multi_hand_landmarks:
+        return None, "لم يتم اكتشاف اليد في الصورة."
+
+    hand_landmarks = results.multi_hand_landmarks[0]
+    landmarks = []
+    for landmark in hand_landmarks.landmark:
+        landmarks.extend([landmark.x, landmark.y, landmark.z])
+
+    if len(landmarks) != 63:
+        return None, "لم يتم استخراج النقاط الصحيحة (63 نقطة)."
+
+    return np.array(landmarks, dtype=np.float32), None
+
+def predict_gesture(image_path):
+    """التنبؤ بالإيماءة بناءً على الصورة"""
+    landmarks, error = extract_hand_landmarks(image_path)
+    if error:
+        return error
+
+    # إعادة تشكيل النقاط لتناسب شكل الإدخال المطلوب (1, 21, 3)
+    landmarks = landmarks.reshape(1, 21, 3)
+
+    # التنبؤ
+    prediction = model.predict(landmarks)
+    predicted_index = np.argmax(prediction)
+    predicted_label = gestures[predicted_index]
+    confidence = prediction[0][predicted_index] * 100
+    return f"التنبؤ: {predicted_label} (الدقة: {confidence:.2f}%)"
+
+def load_and_predict():
+    """تحميل الصورة وتشغيل التنبؤ"""
+    file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
+    if not file_path:
+        return
+
+    # عرض الصورة
+    img = cv2.imread(file_path)
+    if img is not None:
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img_resized = cv2.resize(img_rgb, (400, 400))
+        img_tk = tk.PhotoImage(data=cv2.imencode('.png', img_resized)[1].tobytes())
+        image_label.config(image=img_tk)
+        image_label.image = img_tk
+
+    # تشغيل التنبؤ
+    result = predict_gesture(file_path)
+    result_label.config(text=result)
+
+# إعداد واجهة المستخدم باستخدام Tkinter
+window = tk.Tk()
+window.title("التعرف على إشارات اليد")
+
+# عناصر الواجهة
+load_button = tk.Button(window, text="تحميل صورة", command=load_and_predict)
+load_button.pack(pady=10)
+
+image_label = tk.Label(window)
+image_label.pack()
+
+result_label = tk.Label(window, text="", font=("Arial", 14))
+result_label.pack(pady=10)
+
+# تشغيل التطبيق
+window.mainloop()
